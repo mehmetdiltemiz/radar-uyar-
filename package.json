@@ -1,0 +1,26 @@
+{
+  "name": "radar-uyari",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kişisel radar uyarı uygulaması (iPhone, Capacitor)",
+  "scripts": {
+    "copy-libs": "node scripts/copy-libs.js",
+    "postinstall": "node scripts/copy-libs.js"
+  },
+  "dependencies": {
+    "@capacitor-community/background-geolocation": "^1.2.19",
+    "@capacitor-community/text-to-speech": "^6.0.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/filesystem": "^7.0.0",
+    "@capacitor/haptics": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "@capacitor/local-notifications": "^7.0.0",
+    "@capacitor/preferences": "^7.0.0",
+    "@capacitor/share": "^7.0.0",
+    "leaflet": "1.9.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}

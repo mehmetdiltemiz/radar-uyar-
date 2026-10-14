@@ -1,0 +1,14 @@
+{
+  "appId": "com.mehmetdiltemiz.radaruyari",
+  "appName": "Radar Uyarı",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#111418"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "presentationOptions": ["alert", "sound"]
+    }
+  }
+}
