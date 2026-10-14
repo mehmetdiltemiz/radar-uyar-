@@ -54,7 +54,7 @@ Uygulama yine de süresi dolarsa: AltServer → Shift + elmas → **Sideload .ip
 
 ## 6. Yedekler
 
-- Her değişiklikte otomatik yedek: **Dosyalar → iPhone'umda → Radar Uyarı → radarlar-yedek.json**
+- Her değişiklikte otomatik yedek: **Dosyalar → iPhone'umda → Radar Uyari → radarlar-yedek.json**
 - Uygulama verisi bir şekilde silinirse, uygulama açılışta bu dosyayı bulup radarları geri yükler.
 - Uygulamayı **silersen** bu klasör de silinir. Silmeden önce **Dışa aktar** ile dosyayı iCloud Drive'a veya bilgisayara kaydet. Sonra **İçe aktar** ile geri yüklersin.
 

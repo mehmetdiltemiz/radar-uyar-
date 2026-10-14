@@ -279,6 +279,9 @@ function drawRadars() {
     m.bindPopup(div);
     radarLayer.addLayer(m);
   }
+  // Radar eklenip silinince "en yakın radar" göstergesini hemen güncelle.
+  if (state.pos) checkRadars();
+  else if (!state.radars.length) $('nearest').textContent = '--';
 }
 
 // Haritayı elle kaydırınca takip kapanır.
