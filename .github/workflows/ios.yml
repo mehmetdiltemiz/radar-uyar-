@@ -29,7 +29,8 @@ jobs:
           PLIST=ios/App/App/Info.plist
           pb() { /usr/libexec/PlistBuddy -c "$1" "$PLIST" 2>/dev/null || true; }
           pb "Delete :CFBundleDisplayName"
-          pb "Add :CFBundleDisplayName string Radar Uyarı"
+          pb "Add :CFBundleDisplayName string Radar Uyari"
+          pb "Set :CFBundleName Radar Uyari"
           pb "Add :NSLocationWhenInUseUsageDescription string Radarlara yaklaştığında seni uyarmak için konumun kullanılır."
           pb "Add :NSLocationAlwaysAndWhenInUseUsageDescription string Ekran kapalıyken de radar uyarısı verebilmek için konumun arka planda kullanılır."
           pb "Add :NSLocationAlwaysUsageDescription string Ekran kapalıyken de radar uyarısı verebilmek için konumun arka planda kullanılır."
