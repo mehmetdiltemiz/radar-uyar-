@@ -5,8 +5,19 @@
    ================================================================ */
 
 const Cap = window.Capacitor;
+const CapCore = window.capacitorExports; // lib/capacitor.js
 const isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
-const plugin = (name) => (isNative ? Cap.registerPlugin(name) : null);
+const registerPlugin = (CapCore && CapCore.registerPlugin) || (Cap && Cap.registerPlugin);
+const plugin = (name) => {
+  if (!isNative) return null;
+  try {
+    if (registerPlugin) return registerPlugin(name);
+    return (Cap.Plugins && Cap.Plugins[name]) || null;
+  } catch (e) {
+    console.warn('eklenti yok: ' + name, e);
+    return null;
+  }
+};
 
 const BgGeo = plugin('BackgroundGeolocation');
 const Prefs = plugin('Preferences');
@@ -16,7 +27,7 @@ const Haptics = plugin('Haptics');
 const Notif = plugin('LocalNotifications');
 const Tts = plugin('TextToSpeech');
 const AppP = plugin('App');
-const Http = plugin('CapacitorHttp');
+const Http = isNative ? ((CapCore && CapCore.CapacitorHttp) || plugin('CapacitorHttp')) : null;
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const USER_AGENT = 'RadarUyari/1.0 (kisisel kullanim)';
@@ -513,7 +524,7 @@ function onLocationError(err) {
   $('gps').className = 'gps off';
   if (err && err.code === 'NOT_AUTHORIZED') {
     if (confirm('Konum izni yok. Radar uyarısı için konum izni gerekli.\nAyarlar açılsın mı? (Konum › “Her Zaman” seç)')) {
-      BgGeo.openSettings();
+      BgGeo.openSettings().catch(() => {});
     }
   }
 }
@@ -706,20 +717,25 @@ function bindUi() {
   };
 
   if (AppP) {
-    AppP.addListener('appStateChange', ({ isActive }) => {
+    Promise.resolve().then(() => AppP.addListener('appStateChange', ({ isActive }) => {
       state.appActive = isActive;
       if (isActive) {
         unlockAudio();
         if (state.follow && state.pos) map.setView([state.pos.lat, state.pos.lng]);
       }
-    });
+    })).catch((e) => console.warn('appStateChange', e));
   } else {
     document.addEventListener('visibilitychange', () => { state.appActive = !document.hidden; });
   }
 }
 
 (async function init() {
-  await loadData();
+  // Kayıt okuma takılırsa bile 4 sn sonra arayüz çalışsın.
+  try {
+    await Promise.race([loadData(), new Promise((r) => setTimeout(r, 4000))]);
+  } catch (e) {
+    showFatal('Kayıt okunamadı: ' + (e.message || e));
+  }
   bindUi();
   drawRadars();
   renderRadars();

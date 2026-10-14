@@ -104,6 +104,17 @@
     </div>
   </div>
 
+  <script>
+    // Açılışta bir hata olursa ekranda göster (iPhone'da konsol göremiyoruz).
+    function showFatal(msg) {
+      var d = document.getElementById('fatal') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'fatal' }));
+      d.style.cssText = 'position:fixed;left:8px;right:8px;bottom:100px;z-index:9999;background:#7f1d1d;color:#fff;padding:10px;border-radius:10px;font:13px monospace;white-space:pre-wrap';
+      d.textContent = 'HATA: ' + msg;
+    }
+    window.addEventListener('error', function (e) { showFatal(e.message + ' (' + (e.filename || '').split('/').pop() + ':' + e.lineno + ')'); });
+    window.addEventListener('unhandledrejection', function (e) { showFatal(String(e.reason && (e.reason.message || e.reason))); });
+  </script>
+  <script src="lib/capacitor.js"></script>
   <script src="lib/leaflet/leaflet.js"></script>
   <script src="app.js"></script>
 </body>
