@@ -368,23 +368,31 @@ async function deleteRadar(id) {
 
 /* ---------------- Uyarı ---------------- */
 let audioCtx = null;
+// iPhone web sesi varsayılan olarak sessiz modda kısılır; "playback" ile sessiz modda da çalar.
+function setAudioSession(type) {
+  try { if (navigator.audioSession) navigator.audioSession.type = type; } catch { /* eski iOS */ }
+}
+
 function unlockAudio() {
+  setAudioSession('playback');
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (audioCtx.state !== 'running') audioCtx.resume();
   } catch { /* ses yok */ }
 }
 
-function beep() {
+async function beep() {
   if (!audioCtx) return;
-  const t0 = audioCtx.currentTime;
+  setAudioSession('playback');
+  try { if (audioCtx.state !== 'running') await audioCtx.resume(); } catch { /* yok say */ }
+  const t0 = audioCtx.currentTime + 0.05;
   [0, 0.25, 0.5].forEach((dt, i) => {
     const o = audioCtx.createOscillator();
     const g = audioCtx.createGain();
     o.type = 'square';
     o.frequency.value = i === 2 ? 1320 : 990;
     g.gain.setValueAtTime(0.0001, t0 + dt);
-    g.gain.exponentialRampToValueAtTime(0.35, t0 + dt + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.6, t0 + dt + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.2);
     o.connect(g).connect(audioCtx.destination);
     o.start(t0 + dt);
@@ -417,12 +425,16 @@ function notify(body) {
   Notif.schedule({ notifications: [{ id: notifId++, title: '⚠️ RADAR', body }] }).catch(() => {});
 }
 
+function playAlertSound(d) {
+  haptic('WARNING');
+  beep();
+  setTimeout(() => speak(`Dikkat! ${spokenDist(d)} ileride radar var.`), 800);
+}
+
 function triggerAlert(r, d) {
   state.active = r.id;
   showAlert(d);
-  beep();
-  haptic('WARNING');
-  speak(`Dikkat! ${spokenDist(d)} ileride radar var.`);
+  playAlertSound(d);
   if (!state.appActive) notify(`${fmtDist(d)} ileride radar var`);
 }
 
@@ -690,9 +702,7 @@ function bindUi() {
     unlockAudio();
     const d = state.settings.distance;
     showAlert(d);
-    beep();
-    haptic('WARNING');
-    speak(`Dikkat! ${spokenDist(d)} ileride radar var.`);
+    playAlertSound(d);
     setTimeout(() => { if (!state.active) $('alert').classList.add('hidden'); }, 4000);
   };
 
