@@ -11,14 +11,19 @@ Kişisel radar uyarı uygulaması. Radar yerlerini sen işaretlersin, yaklaşın
 
 Elle yeniden derlemek için: **Actions → iOS IPA → Run workflow**.
 
-## 2. iPhone'a yükle (Sideloadly)
+## 2. iPhone'a yükle (AltServer)
 
-1. iPhone'u USB ile bağla, kilidini aç.
-2. Sideloadly'yi aç. **iDevice** kutusunda telefonun görünsün.
-3. `RadarUyari.ipa` dosyasını Sideloadly'deki **IPA** simgesinin üzerine sürükle.
-4. **Apple ID** kutusuna Apple ID e-postanı yaz, **Start**'a bas.
-5. Şifreni Sideloadly'nin kendi penceresine gir (iki adımlı doğrulama kodu gelirse onu da gir).
-6. "Done" yazınca yükleme bitti.
+Not: Eylül 2026'dan beri Apple, Sideloadly'nin giriş yöntemini reddediyor (HTTP 503). Bu yüzden AltServer kullanıyoruz.
+
+İlk kurulum (bir kez):
+1. https://altstore.io → **AltServer for Windows** (altinstaller.zip) indir, kur. iTunes ve iCloud'un **web sürümü** kurulu olmalı (Microsoft Store sürümü değil).
+2. AltServer'ı aç. Saatin yanındaki **^** içinde elmas simgesi belirir.
+3. iPhone USB ile bağlıyken elmas simgesi → **Install AltStore → iPhone** → Apple ID ve şifre.
+
+Radar Uyari'yı yükleme:
+1. iPhone USB ile bağlı, kilidi açık.
+2. **Shift** basılı tutarak elmas simgesine tıkla → **Sideload .ipa...** → **iPhone** → `RadarUyari.ipa`.
+3. "Installation Succeeded" gelince bitti.
 
 ## 3. iPhone'da ilk ayarlar (bir kez)
 
@@ -39,13 +44,13 @@ Elle yeniden derlemek için: **Actions → iOS IPA → Run workflow**.
 
 ## 5. Her 7 günde bir yenileme
 
-Ücretsiz Apple ID ile imza 7 gün geçerli. Süre dolunca uygulama açılmaz.
+Ücretsiz Apple ID ile imza 7 gün geçerli. Süre dolunca uygulama açılmaz (radarların silinmez).
 
-1. (Önerilir) Uygulamada Menü → **Dışa aktar** ile yedek al.
-2. iPhone'u bağla, Sideloadly'de aynı `RadarUyari.ipa` ile aynı Apple ID'yi kullanıp **Start**.
-3. Uygulama üstüne kurulur, radarların yerinde kalır.
+**Otomatik:** iTunes'ta telefon → Özet → **"Bu iPhone ile Wi-Fi üzerinden eşzamanla"** işaretli olsun. Bilgisayarda AltServer açık ve telefon aynı Wi-Fi'deyken AltStore arka planda kendiliğinden yeniler.
 
-İpucu: Sideloadly'de **Advanced Options → Automatic Refresh** açılırsa, bilgisayar açık ve telefon aynı Wi-Fi'deyken kendiliğinden yeniler.
+**Elle:** Telefonda **AltStore → My Apps → Refresh All** (AltServer açık, aynı Wi-Fi).
+
+Uygulama yine de süresi dolarsa: AltServer → Shift + elmas → **Sideload .ipa...** ile aynı `RadarUyari.ipa`'yı tekrar yükle. Radarlar yerinde kalır.
 
 ## 6. Yedekler
 
@@ -65,8 +70,9 @@ Menü → **Görünen alanı indir**. Haritayı indirmek istediğin bölgeye get
 |---|---|
 | Ekran kapalıyken uyarmıyor | Ayarlar → Radar Uyarı → Konum → **Her Zaman**. Uygulamayı yukarı kaydırıp tamamen kapatma. |
 | Ses gelmiyor | Telefonun sesi açık mı? Menü → Uyarıyı test et. |
-| Uygulama açılmıyor | 7 gün dolmuş, Sideloadly ile yeniden yükle. |
-| Sideloadly “Guru Meditation” / giriş hatası | Sideloadly'yi güncelle, iTunes ve iCloud'un web sürümü kurulu olsun. |
+| Uygulama açılmıyor | 7 gün dolmuş, AltStore → Refresh All ya da AltServer ile yeniden yükle. |
+| Uygulama adı geçersiz hatası | Uygulama adında Türkçe karakter olmamalı (Radar Uyari). |
+| Açılışta altta kırmızı HATA kutusu | Ekran görüntüsünü al, hatayı gösterir. |
 | GPS kırmızı | Açık havada bekle, tünelde sinyal kesilir. |
 
 Harita © OpenStreetMap katkıcıları.
