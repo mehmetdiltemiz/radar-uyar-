@@ -19,21 +19,17 @@
 
   <!-- Radar uyarı bandı -->
   <div id="alert" class="hidden">
-    <div class="alert-icon">⚠️</div>
-    <div>
-      <div class="alert-title">RADAR</div>
-      <div id="alert-dist" class="alert-dist">2,0 km</div>
-    </div>
+    <span class="alert-icon">⚠️</span>
+    <span class="alert-title">RADAR</span>
+    <span id="alert-dist" class="alert-dist">2,0 km</span>
   </div>
 
   <!-- Sağ butonlar -->
   <div id="side">
+    <button id="btn-mark" class="round mark" title="Bulunduğum yere radar işaretle"><span>📍</span><small>RADAR</small></button>
     <button id="btn-follow" class="round active" title="Konumumu takip et">◎</button>
     <button id="btn-menu" class="round" title="Menü">☰</button>
   </div>
-
-  <!-- Büyük işaretle butonu -->
-  <button id="btn-mark">📍 RADAR İŞARETLE</button>
 
   <div id="toast" class="hidden"></div>
 
@@ -45,7 +41,7 @@
       <ul>
         <li>Konum izninde <b>“Her Zaman”</b> seç, ekran kapalıyken de uyarsın.</li>
         <li>Bildirim iznine <b>izin ver</b>.</li>
-        <li>Haritada bir yere <b>uzun bas</b>: oraya radar ekler.</li>
+        <li><b>📍 RADAR</b> butonu bulunduğun yere, haritaya <b>uzun basmak</b> o noktaya radar ekler.</li>
       </ul>
       <button id="btn-start" class="primary">BAŞLAT</button>
     </div>
@@ -68,13 +64,19 @@
             <option value="3000">3 km</option>
           </select>
         </label>
+        <label class="row">Harita yönü
+          <select id="set-mapup">
+            <option value="heading">Gidiş yönü yukarı</option>
+            <option value="north">Kuzey yukarı</option>
+          </select>
+        </label>
         <label class="row">Sesli uyarı (konuşma)
           <input type="checkbox" id="set-voice">
         </label>
         <label class="row">Yön filtresi
           <input type="checkbox" id="set-heading">
         </label>
-        <p class="hint">Yön filtresi açıkken, sürerken işaretlediğin radarlar sadece aynı yönde giderken uyarır (karşı şerit için ötmez).</p>
+        <p class="hint">Uyarı sadece radar gittiğin yolun ilerisindeyse ve ona yaklaşıyorsan verilir. Yön filtresi açıkken, sürerken işaretlediğin radarlar karşı şeritte giderken de ötmez.</p>
         <button id="btn-test">Uyarıyı test et</button>
       </section>
 
@@ -116,6 +118,7 @@
   </script>
   <script src="lib/capacitor.js"></script>
   <script src="lib/leaflet/leaflet.js"></script>
+  <script src="lib/leaflet-rotate.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

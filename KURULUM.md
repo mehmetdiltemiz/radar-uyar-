@@ -36,10 +36,11 @@ Radar Uyari'yı yükleme:
 
 ## 4. Kullanım
 
-- **📍 RADAR İŞARETLE:** Bulunduğun yere radar ekler. Sürerken işaretlersen gidiş yönün de kaydedilir, karşı şeritte ötmez.
+- **📍 RADAR (sağdaki kırmızı yuvarlak buton):** Bulunduğun yere radar ekler. Sürerken işaretlersen gidiş yönün de kaydedilir, karşı şeritte ötmez.
 - **Haritaya uzun bas:** Oraya radar ekler (her iki yönde uyarır).
 - **Radar silme:** Radara dokun → “Bu radarı sil”, ya da Menü → Radarlarım → Sil. Sen silmedikçe hiçbir radar silinmez.
-- **◎ butonu:** Haritayı konumuna kilitler / bırakır.
+- **◎ butonu:** Haritayı konumuna kilitler / bırakır. Harita varsayılan olarak gidiş yönün yukarıda olacak şekilde döner (Menü → Harita yönü → Kuzey yukarı ile kapatılır).
+- **Uyarı ne zaman gelir:** Radar gittiğin yolun ilerisindeyse ve ona yaklaşıyorsan. Yan yoldaki, arkada kalan ya da etrafında dolaştığın radar için ötmez. Radarı geçince ya da yoldan sapınca uyarı kendiliğinden kalkar.
 - **Menü:** Uyarı mesafesi (1/2/3 km), sesli uyarı, yön filtresi, uyarı testi, yedekleme, çevrimdışı harita.
 
 ## 5. Her 7 günde bir yenileme

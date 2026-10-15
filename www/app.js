@@ -34,18 +34,23 @@ const USER_AGENT = 'RadarUyari/1.0 (kisisel kullanim)';
 const MAX_OFFLINE_ZOOM = 16;
 const MAX_OFFLINE_TILES = 2500;
 const DUPLICATE_RADIUS = 150;   // m: bu kadar yakında radar varsa tekrar sor
-const HEADING_TOLERANCE = 60;   // derece
+const HEADING_TOLERANCE = 45;   // derece: yönlü radar için gidiş yönü farkı
 const REARM_EXTRA = 500;        // m: uyarı mesafesinin bu kadar dışına çıkınca tekrar uyarabilir
+const MAX_LATERAL = 300;        // m: radar gidiş çizgimizden en fazla bu kadar yanda olabilir
+const MIN_SPEED = 2.5;          // m/s (~9 km/s): bunun altında yeni uyarı başlatma
+const PASSED_MARGIN = 80;       // m: en yakın noktadan bu kadar uzaklaşınca radar geçildi say
 
 /* ---------------- Durum ---------------- */
 const state = {
   radars: [],
-  settings: { distance: 2000, voice: true, heading: true },
+  settings: { distance: 2000, voice: true, heading: true, mapUp: 'heading' },
   pos: null,          // { lat, lng, acc, speed, heading }
   lastPos: null,
   heading: null,
   follow: true,
-  alerted: new Map(), // radar id -> en küçük mesafe
+  alerted: new Set(), // bu yaklaşmada uyarısı verilmiş radarlar
+  track: new Map(),   // radar id -> { lastD, min, approach, away }
+  moved: 0,           // son konum güncellemesinde gidilen mesafe (m)
   active: null,       // şu an uyarılan radar id
   appActive: true,
   started: false,
@@ -246,7 +251,18 @@ const CachedTiles = L.TileLayer.extend({
 });
 
 /* ---------------- Harita ---------------- */
-const map = L.map('map', { zoomControl: false, attributionControl: true }).setView([39.0, 35.2], 6);
+const map = L.map('map', {
+  zoomControl: false,
+  attributionControl: true,
+  rotate: !!L.Map.prototype.setBearing, // leaflet-rotate
+  rotateControl: false,
+  touchRotate: false,
+  shiftKeyRotate: false,
+  compassBearing: false,
+  bearing: 0,
+}).setView([39.0, 35.2], 6);
+const canRotate = typeof map.setBearing === 'function';
+const mapBearing = () => (canRotate ? map.getBearing() : 0);
 map.attributionControl.setPrefix(false);
 const tileLayer = new CachedTiles(TILE_URL, { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
@@ -260,7 +276,7 @@ const accCircle = L.circle([0, 0], { radius: 0, weight: 0, fillColor: '#3b82f6',
 
 function radarIcon(r) {
   const arrow = r.heading != null
-    ? `<div class="arrow" style="transform-origin:6px 24px;transform:rotate(${r.heading}deg)"></div>` : '';
+    ? `<div class="arrow" data-h="${r.heading}" style="transform-origin:6px 24px;transform:rotate(${r.heading + mapBearing()}deg)"></div>` : '';
   return L.divIcon({ className: '', html: `<div class="radar-pin">${arrow}📷</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
 }
 
@@ -284,13 +300,55 @@ function drawRadars() {
   else if (!state.radars.length) $('nearest').textContent = '--';
 }
 
+// Harita dönünce işaretlerdeki yön okları ekrana göre düzeltilir (işaretler hep dik durur).
+function updateArrows() {
+  document.querySelectorAll('.radar-pin .arrow').forEach((a) => {
+    a.style.transform = 'rotate(' + (+a.dataset.h + mapBearing()) + 'deg)';
+  });
+  updateCone();
+}
+map.on('rotate', updateArrows);
+
+function updateCone() {
+  const cone = meMarker.getElement() && meMarker.getElement().querySelector('.cone');
+  if (!cone) return;
+  cone.style.display = state.heading == null ? 'none' : '';
+  cone.style.transformOrigin = '7px 24px';
+  cone.style.transform = 'rotate(' + ((state.heading || 0) + mapBearing()) + 'deg)';
+}
+
 // Haritayı elle kaydırınca takip kapanır.
 map.on('dragstart', () => setFollow(false));
+
+// Gidiş yönü yukarıdayken konum noktası ekranın alt kısmında dursun, ileri daha çok görünsün.
+function followView(p, animate) {
+  const headingUp = state.settings.mapUp === 'heading' && canRotate;
+  if (canRotate) {
+    if (!headingUp) map.setBearing(0);
+    else if (state.heading != null && (p.speed == null || p.speed > 1.5)) map.setBearing(-state.heading);
+  }
+  let center = [p.lat, p.lng];
+  if (headingUp && state.heading != null) {
+    const mPerPx = 156543.03392 * Math.cos(toRad(p.lat)) / 2 ** map.getZoom();
+    center = destination(p.lat, p.lng, state.heading, map.getSize().y * 0.25 * mPerPx);
+  }
+  map.setView(center, map.getZoom(), { animate });
+}
+
+function destination(lat, lng, brg, m) {
+  const d = m / 6371000, b = toRad(brg), la = toRad(lat), lo = toRad(lng);
+  const la2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(b));
+  const lo2 = lo + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(la2));
+  return [toDeg(la2), toDeg(lo2)];
+}
 
 function setFollow(on) {
   state.follow = on;
   $('btn-follow').classList.toggle('active', on);
-  if (on && state.pos) map.setView([state.pos.lat, state.pos.lng], Math.max(map.getZoom(), 15));
+  if (on && state.pos) {
+    if (map.getZoom() < 15) map.setZoom(15, { animate: false });
+    followView(state.pos, true);
+  }
 }
 
 /* Uzun basma ile radar ekleme (iPhone'da contextmenu olayı gelmediği için elle). */
@@ -343,7 +401,7 @@ async function addRadarAt(lat, lng, heading, ask) {
     created: new Date().toISOString(),
   };
   state.radars.push(r);
-  state.alerted.set(r.id, 0); // az önce eklediğin radar için hemen ötmesin
+  state.alerted.add(r.id); // az önce eklediğin radar için hemen ötmesin
   await saveRadars();
   drawRadars();
   haptic('SUCCESS');
@@ -362,6 +420,7 @@ async function deleteRadar(id) {
   if (!confirm('Bu radar kalıcı olarak silinsin mi?')) return;
   state.radars = state.radars.filter((x) => x.id !== id);
   state.alerted.delete(id);
+  state.track.delete(id);
   if (state.active === id) hideAlert();
   map.closePopup();
   await saveRadars();
@@ -451,12 +510,17 @@ function hideAlert() {
   $('alert').classList.add('hidden');
 }
 
-function headingOk(r, d) {
-  if (!state.settings.heading || state.heading == null) return true;
-  // Radar önümüzde mi? (yanından/arkasından geçtiysek uyarma)
-  if (d > 80 && angleDiff(state.heading, bearing(state.pos.lat, state.pos.lng, r.lat, r.lng)) > 90) return false;
-  // Radar yönlü işaretlendiyse aynı yönde mi gidiyoruz?
-  if (r.heading != null && angleDiff(state.heading, r.heading) > HEADING_TOLERANCE) return false;
+/* Radar gittiğimiz yolun ilerisinde mi?
+   Rota bilinmediği için gidiş yönünden tahmin edilir: radar önümüzde dar bir açıda,
+   gidiş çizgimizden en fazla MAX_LATERAL metre yanda olmalı. */
+function onRoute(r, d) {
+  const p = state.pos;
+  if (state.heading == null || p.speed == null || p.speed < MIN_SPEED) return false;
+  const a = angleDiff(state.heading, bearing(p.lat, p.lng, r.lat, r.lng));
+  const maxAngle = d > 1000 ? 25 : d > 400 ? 35 : 55;
+  if (a > maxAngle) return false;
+  if (d * Math.sin(toRad(a)) > MAX_LATERAL) return false;
+  if (state.settings.heading && r.heading != null && angleDiff(state.heading, r.heading) > HEADING_TOLERANCE) return false;
   return true;
 }
 
@@ -470,24 +534,39 @@ function checkRadars() {
     const d = distance(p.lat, p.lng, r.lat, r.lng);
     if (d < nearest) nearest = d;
 
-    if (d <= limit) {
-      if (!state.alerted.has(r.id)) {
-        if (headingOk(r, d)) {
-          state.alerted.set(r.id, d);
-          triggerAlert(r, d);
-        }
-      } else {
-        const min = Math.min(state.alerted.get(r.id), d);
-        state.alerted.set(r.id, min);
-        if (state.active === r.id) {
-          // Radarı geçtik: mesafe en yakın noktadan belirgin şekilde arttı.
-          if (d > min + 60 && min < 300) hideAlert();
-          else showAlert(d);
-        }
-      }
-    } else {
+    if (d > limit) {
       if (state.active === r.id) hideAlert();
+      state.track.delete(r.id);
       if (d > limit + REARM_EXTRA) state.alerted.delete(r.id);
+      continue;
+    }
+
+    // Yaklaşıyor muyuz? Gidilen yolun en az %60'ı kadar radara yaklaşmalıyız.
+    const t = state.track.get(r.id) || { lastD: d, min: d, approach: 0, away: 0 };
+    if (state.moved >= 3) {
+      const ratio = (t.lastD - d) / state.moved;
+      if (ratio > 0.6) { t.approach++; t.away = 0; }
+      else if (ratio < 0.1) { t.approach = 0; t.away++; }
+    }
+    t.lastD = d;
+    t.min = Math.min(t.min, d);
+    state.track.set(r.id, t);
+
+    // Uyarıdan sonra 1 km uzaklaştıysak, tekrar yaklaşırken yeniden uyarabiliriz.
+    if (state.alerted.has(r.id) && state.active !== r.id && d > t.min + 1000) {
+      state.alerted.delete(r.id);
+      t.min = d;
+    }
+
+    if (!state.alerted.has(r.id)) {
+      if (t.approach >= 2 && onRoute(r, d)) {
+        state.alerted.add(r.id);
+        triggerAlert(r, d);
+      }
+    } else if (state.active === r.id) {
+      // Radarı geçtik ya da yoldan ayrılıp uzaklaşıyoruz: uyarıyı kaldır.
+      if (d > t.min + PASSED_MARGIN || t.away >= 2) hideAlert();
+      else showAlert(d);
     }
   }
   $('nearest').textContent = nearest === Infinity ? '--' : fmtDist(nearest);
@@ -511,6 +590,7 @@ function onLocation(loc) {
   }
   if (!state.lastPos || distance(state.lastPos.lat, state.lastPos.lng, p.lat, p.lng) > 15) state.lastPos = p;
 
+  state.moved = state.pos ? distance(state.pos.lat, state.pos.lng, p.lat, p.lng) : 0;
   const first = !state.pos;
   state.pos = p;
 
@@ -520,16 +600,11 @@ function onLocation(loc) {
   meMarker.setLatLng([p.lat, p.lng]);
   accCircle.setLatLng([p.lat, p.lng]).setRadius(p.acc || 0);
   if (first) { meMarker.addTo(map); accCircle.addTo(map); }
-  const cone = meMarker.getElement() && meMarker.getElement().querySelector('.cone');
-  if (cone) {
-    cone.style.display = state.heading == null ? 'none' : '';
-    cone.style.transformOrigin = '7px 24px';
-    cone.style.transform = `rotate(${state.heading || 0}deg)`;
-  }
-
   if (state.appActive && (state.follow || first)) {
-    map.setView([p.lat, p.lng], first ? 15 : map.getZoom(), { animate: !first });
+    if (first) map.setView([p.lat, p.lng], 15, { animate: false });
+    followView(p, !first);
   }
+  updateCone();
 
   checkRadars();
   retryTilesIfNeeded();
@@ -697,7 +772,15 @@ function bindUi() {
   sd.value = String(state.settings.distance);
   sv.checked = state.settings.voice;
   sh.checked = state.settings.heading;
-  sd.onchange = () => { state.settings.distance = +sd.value; state.alerted.clear(); saveSettings(); };
+  sd.onchange = () => { state.settings.distance = +sd.value; state.alerted.clear(); state.track.clear(); saveSettings(); };
+  const sm = $('set-mapup');
+  sm.value = state.settings.mapUp;
+  sm.onchange = () => {
+    state.settings.mapUp = sm.value;
+    saveSettings();
+    if (state.pos && state.follow) followView(state.pos, false);
+    else if (canRotate && sm.value === 'north') map.setBearing(0);
+  };
   sv.onchange = () => { state.settings.voice = sv.checked; saveSettings(); };
   sh.onchange = () => { state.settings.heading = sh.checked; saveSettings(); };
 
@@ -734,7 +817,7 @@ function bindUi() {
       state.appActive = isActive;
       if (isActive) {
         unlockAudio();
-        if (state.follow && state.pos) map.setView([state.pos.lat, state.pos.lng]);
+        if (state.follow && state.pos) followView(state.pos, false);
       }
     })).catch((e) => console.warn('appStateChange', e));
   } else {
