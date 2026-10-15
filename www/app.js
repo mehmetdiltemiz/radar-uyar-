@@ -573,6 +573,23 @@ function checkRadars() {
 }
 
 /* ---------------- Konum ---------------- */
+// Konum 10 m'de bir güncellendiği için araç durunca yeni konum gelmez;
+// 3 sn konum gelmezse durmuş sayılır ve hız 0 gösterilir.
+const STOPPED_AFTER_MS = 3000;
+
+function showSpeed(ms) {
+  const kmh = ms == null ? null : ms * 3.6;
+  $('speed').textContent = kmh == null ? '--' : kmh < 2 ? '0' : Math.round(kmh);
+}
+
+setInterval(() => {
+  if (!state.pos || !state.lastFixAt || Date.now() - state.lastFixAt < STOPPED_AFTER_MS) return;
+  if (state.pos.speed !== 0) {
+    state.pos.speed = 0;
+    showSpeed(0);
+  }
+}, 1000);
+
 function onLocation(loc) {
   const p = {
     lat: loc.latitude,
@@ -595,7 +612,8 @@ function onLocation(loc) {
   state.pos = p;
 
   $('gps').className = 'gps on';
-  $('speed').textContent = p.speed != null ? Math.round(p.speed * 3.6) : '--';
+  state.lastFixAt = Date.now();
+  showSpeed(p.speed);
 
   meMarker.setLatLng([p.lat, p.lng]);
   accCircle.setLatLng([p.lat, p.lng]).setRadius(p.acc || 0);
